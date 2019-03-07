@@ -3,6 +3,7 @@ import re
 import struct
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 LANDMARKS = [
     "Outer left eyebrow",
@@ -54,8 +55,8 @@ def process_bnt(fname):
         imfile = struct.unpack("{}c".format(n_char), f.read(1 * n_char))
         n_vals = struct.unpack("I", f.read(4))[0]
         values = struct.unpack("{}d".format(n_vals), f.read(8 * n_vals))   
-    values = np.flip(np.array(values).reshape((5, nrows * ncols)).T.reshape((nrows, ncols, 5)))
-    return values
+    values = np.array(values).reshape((5, nrows * ncols)).T.reshape((nrows, ncols, 5))
+    return np.flipud(values)
 
 def process_uid(uid_folder, E={"lm3", "bnt"}, C={"YR", "PR", "CR", "O"}):
     data = {}
@@ -79,7 +80,7 @@ def process_uid(uid_folder, E={"lm3", "bnt"}, C={"YR", "PR", "CR", "O"}):
         assert not np.all(np.isnan(data[(klass, code, number)][-1]))
     return data
 
-def process_data(path):
+def load_data(path):
     lookup_table = {}
     id_pattern = re.compile(r"bs[0-9]{3}")
     uids = [f for f in os.listdir(path) if id_pattern.findall(f)]
@@ -101,3 +102,27 @@ def convert_data(lookup_table):
             lookup_table[uid][config] = n_samples
             n_samples += 1
     return lookup_table, landmarks, face_data
+
+def padding_data(face_data):
+    w_max = max(x.shape[1] for x in face_data)
+    h_max = max(x.shape[0] for x in face_data)
+    z_min = min(np.min(x) for x in face_data)
+
+    for i, f in enumerate(face_data):
+        w_pad = (w_max - f.shape[1]) // 2
+        h_pad = (h_max - f.shape[0]) // 2
+        f_pad = ((h_pad, h_max - f.shape[0] - h_pad), (w_pad, w_max - f.shape[1] - w_pad), (0, 0))
+        face_data[i] = np.pad(f, f_pad, mode="constant", constant_values=z_min)
+
+def visualize_z(lookup_table, face_data):
+    uid = list(lookup_table.keys())[0]
+
+    fig, axs = plt.subplots(nrows=1, ncols=5, figsize=(9, 6), subplot_kw={'xticks': [], 'yticks': []})
+
+    for ax, config in zip(axs.flat, lookup_table[uid]):
+        idx = lookup_table[uid][config]
+        ax.imshow(face_data[idx, :, :, 2])
+        ax.set_title("_".join(config))
+
+    plt.tight_layout()
+    plt.show()
