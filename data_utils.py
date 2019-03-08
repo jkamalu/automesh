@@ -4,7 +4,7 @@ import struct
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import QuantileTransformer
 
 LANDMARKS = [
     "Outer left eyebrow",
@@ -169,7 +169,7 @@ def scaling_data(face_data):
         lowest, low = np.sort(np.unique(face_data[i, :, :, 2]))[:2]
         face_data[i, :, :, 2][face_data[i, :, :, 2] == lowest] = low
 
-    scaler = MinMaxScaler()
+    scaler = QuantileTransformer()
     scaler.fit(face_data[:, :, :, 2].reshape(-1, 1))
     scaled_z = scaler.transform(face_data[:, :, :, 2].reshape(-1, 1)).reshape((N, W, H))
     face_data[:, :, :, 2] = scaled_z
