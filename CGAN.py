@@ -3,6 +3,7 @@ from keras.layers import Input, Dense, Dropout, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
 from keras.layers import Flatten, Reshape
 from keras.optimizers import RMSprop
+from keras.layers import LeakyReLU
 
 class CGAN:
     
@@ -15,24 +16,24 @@ class CGAN:
     def build_D(self):
         d_input = Input((self.params.W, self.params.H, self.params.n_channels))
         
-        d_layer = Conv2D(self.params.n_filters, (4, 4), padding="same", activation="relu")(d_input)
+        d_layer = Conv2D(self.params.n_filters, (4, 4), padding="same", activation=LeakyReLU())(d_input)
         d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), padding="same", activation="relu")(d_layer)
+        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), padding="same", activation=LeakyReLU())(d_layer)
         d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), padding="same", activation="relu")(d_layer)
-        d_layer = MaxPooling2D()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)        
+#         d_layer = Conv2D(self.params.n_filters * 4, (4, 4), padding="same", activation=LeakyReLU())(d_layer)
+#         d_layer = MaxPooling2D()(d_layer)
+#         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)        
         
         d_layer = Flatten()(d_layer)
         d_layer = Dense(1, activation="sigmoid")(d_layer)
         
         self.D = Model(inputs=d_input, outputs=d_layer)
         
-        self.D.compile(optimizer=RMSprop(lr=0.0002), loss="binary_crossentropy", metrics=["accuracy"])
+        self.D.compile(optimizer=RMSprop(lr=self.params.lr_D), loss="binary_crossentropy", metrics=["accuracy"])
         
         return self.D
         
@@ -81,6 +82,6 @@ class CGAN:
         self.D.trainable = False
         self.GD.add(self.D)
         
-        self.GD.compile(optimizer=RMSprop(lr=0.0001), loss="binary_crossentropy", metrics=["accuracy"])
+        self.GD.compile(optimizer=RMSprop(lr=self.params.lr_GD), loss="binary_crossentropy", metrics=["accuracy"])
         
         return self.GD
