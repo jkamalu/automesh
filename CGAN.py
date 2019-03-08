@@ -16,11 +16,13 @@ class CGAN:
     def build_D(self):
         d_input = Input((self.params.W, self.params.H, self.params.n_channels))
         
-        d_layer = Conv2D(self.params.n_filters, (4, 4), padding="same", activation=LeakyReLU())(d_input)
+        d_layer = Conv2D(self.params.n_filters, (4, 4), padding="same")(d_input)
+        d_layer = LeakyReLU()(d_layer)
         d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), padding="same", activation=LeakyReLU())(d_layer)
+        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), padding="same")(d_layer)
+        d_layer = LeakyReLU()(d_layer)
         d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
