@@ -4,6 +4,7 @@ import struct
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 LANDMARKS = [
     "Outer left eyebrow",
@@ -114,15 +115,31 @@ def padding_data(face_data):
         f_pad = ((h_pad, h_max - f.shape[0] - h_pad), (w_pad, w_max - f.shape[1] - w_pad), (0, 0))
         face_data[i] = np.pad(f, f_pad, mode="constant", constant_values=z_min)
 
-def visualize_z(lookup_table, face_data):
-    uid = list(lookup_table.keys())[0]
+def scaling_data(face_data):
+    N, W, H, channels = face_data.shape
 
+    for i in range(face_data.shape[0]):
+        for channel in range(channels):
+            lowest, low = np.sort(np.unique(face_data[i, :, :, channel]))[:2]
+            face_data[i, :, :, channel][face_data[i, :, :, channel] == lowest] = low
+
+    scaler = MinMaxScaler()
+    scaler.fit(face_data[:, :, :, :].reshape(-1, channels))
+    scaled_z = scaler.transform(face_data[:, :, :, :].reshape(-1, channels)).reshape((N, W, H, channels))
+    face_data[:, :, :, :] = scaled_z
+    return scaler, face_data
+
+def visualize_z(face_data, z_channel=0, lookup_table=None, uid="bs000"):
     fig, axs = plt.subplots(nrows=1, ncols=5, figsize=(9, 6), subplot_kw={'xticks': [], 'yticks': []})
 
-    for ax, config in zip(axs.flat, lookup_table[uid]):
-        idx = lookup_table[uid][config]
-        ax.imshow(face_data[idx, :, :, 2])
-        ax.set_title("_".join(config))
+    if lookup_table:
+        for ax, config in zip(axs.flat, lookup_table[uid]):
+            idx = lookup_table[uid][config]
+            ax.imshow(face_data[idx, :, :, z_channel])
+            ax.set_title("_".join(config))
+    else:
+        for ax, datum in zip(axs.flat, face_data):
+            ax.imshow(datum[:, :, z_channel])
 
     plt.tight_layout()
     plt.show()
