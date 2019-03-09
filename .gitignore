@@ -1,5 +1,6 @@
 .DS_Store
 *.pyc
 data
+models
 .ipynb_checkpoints/
 __pycash__
