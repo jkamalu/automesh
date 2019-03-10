@@ -4,8 +4,8 @@ from keras import Model, Sequential
 from keras.layers import Input, Dense, Dropout, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
 from keras.layers import Flatten, Reshape
-from keras.optimizers import Adam, RMSprop, SGD
-from keras.initializers import TruncatedNormal
+from keras.optimizers import Adam
+from keras.initializers import RandomNormal
 from keras.layers import ReLU, LeakyReLU, Activation
 
 import keras.backend as K
