@@ -4,76 +4,118 @@ from keras import Model, Sequential
 from keras.layers import Input, Dense, Dropout, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
 from keras.layers import Flatten, Reshape
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop, SGD
+from keras.initializers import TruncatedNormal
 from keras.layers import ReLU, LeakyReLU, Activation
+
+import keras.backend as K
+
+def accuracy(y_true, y_pred):
+    pred_greater = K.greater(y_pred, 0.5)
+    true_greater = K.greater(y_true, 0.5)
+    return K.sum(K.cast(K.equal(pred_greater, true_greater), "float32")) / K.cast(K.shape(y_true)[0], "float32")
 
 class CGAN:
     
     def __init__(self, params):
         self.params = params
-        self.build_D()
-        self.build_G()
+        self.build_D(strides=(2, 2))
+        self.build_G(strides=(2, 2))
         self.build_GD()
     
-    def build_D(self):
+    def build_D(self, strides=(1, 1)):
         d_input = Input((self.params.W, self.params.H, self.params.n_channels))
         
-        d_layer = Conv2D(self.params.n_filters, (4, 4), strides=(2, 2), padding="same")(d_input)
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), 
+                         strides=strides, 
+                         padding="same", 
+                         kernel_initializer=TruncatedNormal())(d_input)
         d_layer = LeakyReLU()(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), strides=(2, 2), padding="same")(d_layer)
-        d_layer = BatchNormalization()(d_layer)
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
+                         strides=strides, 
+                         padding="same", 
+                         kernel_initializer=TruncatedNormal())(d_layer)
         d_layer = LeakyReLU()(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), strides=(2, 2), padding="same")(d_layer)
-        d_layer = BatchNormalization()(d_layer)
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
+                         strides=strides, 
+                         padding="same", 
+                         kernel_initializer=TruncatedNormal())(d_layer)
         d_layer = LeakyReLU()(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
         d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        d_layer = Conv2D(self.params.n_filters * 8, (4, 4), strides=(2, 2), padding="same")(d_layer)
-        d_layer = BatchNormalization()(d_layer)
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
+                         strides=strides, padding="same", 
+                         kernel_initializer=TruncatedNormal())(d_layer)
         d_layer = LeakyReLU()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)        
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
+        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)     
         
+        # Flatten and predict
         d_layer = Flatten()(d_layer)
-        d_layer = Dense(1, activation="sigmoid")(d_layer)
+        d_layer = Dense(1, kernel_initializer=TruncatedNormal(), activation="sigmoid")(d_layer)
         
         self.D = Model(inputs=d_input, outputs=d_layer)
         
-        self.D.compile(optimizer=Adam(lr=self.params.lr_D, beta_1=self.params.beta_1), loss="binary_crossentropy", metrics=["accuracy"])
+        self.D.compile(optimizer=Adam(lr=self.params.lr_D), loss="binary_crossentropy", metrics=[accuracy])
         
         return self.D
         
-    def build_G(self):
+    def build_G(self, strides=(1, 1)):
         g_input = Input((self.params.n_rand + self.params.n_cond, ))
         
-        g_layer = Dense((self.params.W // 8) * (self.params.H // 8) * self.params.n_filters * 8)(g_input)
+        # Project the data into higher dimensional space
+        g_layer = Dense((self.params.W // 8) * (self.params.H // 8) * self.params.n_filters * 16, kernel_initializer=TruncatedNormal())(g_input)
         g_layer = BatchNormalization()(g_layer)
-        g_layer = ReLU()(g_layer)
+        g_layer = LeakyReLU()(g_layer)
         g_layer = Dropout(rate=self.params.drop_rate)(g_layer)
         
-        g_layer = Reshape((self.params.W // 8, self.params.H // 8, self.params.n_filters * 8))(g_layer)
+        # Reshape the data for convolution
+        g_layer = Reshape((self.params.W // 8, self.params.H // 8, self.params.n_filters * 16))(g_layer)
         
-        g_layer = Conv2DTranspose(self.params.n_filters * 4, (4, 4), strides=(2, 2), padding="same")(g_layer)
+        # Upsample with many filters
+        if strides == (1, 1):
+            g_layer = UpSampling2D()(g_layer)
+        g_layer = Conv2DTranspose(self.params.n_filters * 16, (4, 4), strides=strides, padding="same", kernel_initializer=TruncatedNormal())(g_layer)
         g_layer = BatchNormalization()(g_layer)
-        g_layer = ReLU()(g_layer)
-        g_layer = Dropout(rate=self.params.drop_rate)(g_layer)
+        g_layer = LeakyReLU()(g_layer)
         
-        g_layer = Conv2DTranspose(self.params.n_filters * 2, (4, 4), strides=(2, 2), padding="same")(g_layer)
+        # Upsample
+        if strides == (1, 1):
+            g_layer = UpSampling2D()(g_layer)
+        g_layer = Conv2DTranspose(self.params.n_filters * 8, (4, 4), strides=strides, padding="same", kernel_initializer=TruncatedNormal())(g_layer)
         g_layer = BatchNormalization()(g_layer)
-        g_layer = ReLU()(g_layer)
-        g_layer = Dropout(rate=self.params.drop_rate)(g_layer)        
+        g_layer = LeakyReLU()(g_layer)        
         
-        g_layer = Conv2DTranspose(self.params.n_filters, (4, 4), strides=(2, 2), padding="same")(g_layer)
+        # Upsample with fewer filters
+        if strides == (1, 1):
+            g_layer = UpSampling2D()(g_layer)
+        g_layer = Conv2DTranspose(self.params.n_filters * 4, (4, 4), strides=strides, padding="same", kernel_initializer=TruncatedNormal())(g_layer)
         g_layer = BatchNormalization()(g_layer)
-        g_layer = ReLU()(g_layer)
-        g_layer = Dropout(rate=self.params.drop_rate)(g_layer)
+        g_layer = LeakyReLU()(g_layer)
         
-        g_layer = Conv2DTranspose(self.params.n_channels, (4, 4), padding="same")(g_layer)
+        # Convolve with fewer filters
+        g_layer = Conv2DTranspose(self.params.n_filters * 2, (4, 4), padding="same", kernel_initializer=TruncatedNormal())(g_layer)
+        g_layer = BatchNormalization()(g_layer)
+        g_layer = LeakyReLU()(g_layer)        
+        
+        # Convolve to n_channels filters
+        g_layer = Conv2DTranspose(self.params.n_channels, (4, 4), padding="same", kernel_initializer=TruncatedNormal())(g_layer)
         g_layer = Activation("sigmoid")(g_layer)
-        g_layer = Dropout(rate=self.params.drop_rate)(g_layer)
         
         self.G = Model(inputs=g_input, outputs=g_layer)
         
@@ -87,10 +129,8 @@ class CGAN:
         self.D.trainable = False
         self.GD.add(self.D)
         
-        self.GD.compile(optimizer=Adam(lr=self.params.lr_GD, beta_1=self.params.beta_1), loss="binary_crossentropy", metrics=["accuracy"])
-        
-        self.D.trainable = True
-        
+        self.GD.compile(optimizer=Adam(lr=self.params.lr_GD), loss="binary_crossentropy", metrics=[accuracy])
+                
         return self.GD
     
 if __name__ == "__main__":

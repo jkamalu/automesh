@@ -63,7 +63,7 @@ def process_bnt(fname):
     values = np.array(values).reshape((5, nrows * ncols)).T.reshape((nrows, ncols, 5))
     return np.flipud(values)
 
-def process_uid(uid_folder, E={"lm3", "bnt"}, C={"YR", "PR", "CR", "O"}):
+def process_uid(uid_folder, E={"lm3", "bnt"}, C={"YR", "PR", "CR", "O", "IGN"}):
     data = {}
     delimiter = re.compile(r"[\._]")
     fname_splits = map(
@@ -186,6 +186,27 @@ def visualize_z(face_data, z_channel=0, lookup_table=None, uid="bs000"):
     else:
         for ax, datum in zip(axs.flat, face_data):
             ax.imshow(datum[:, :, z_channel])
+
+    plt.tight_layout()
+    plt.show()
+    
+def visualize_history(history):
+    
+    fig, axs = plt.subplots(2, 1, sharex=True)
+
+    x = None
+    axs[0].set_title("Losses")
+    axs[1].set_title("Accuracies")
+    for key in history:
+        if x is None:
+            x = list(range(len(history[key])))
+        y = [np.mean(history[key][-10:i]) for i in range(len(x))]
+        if key[::-1].endswith("ssol"):
+            axs[0].plot(x, y, label=key)
+        else:
+            axs[1].plot(x, y, label=key)
+    axs[0].legend()
+    axs[1].legend()
 
     plt.tight_layout()
     plt.show()
