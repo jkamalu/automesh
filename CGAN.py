@@ -43,7 +43,7 @@ class CGAN:
         self.GD.summary(print_fn=lambda x: GD_lines.append(x))
         string += "\n".join(GD_lines)
         return string
-        
+
     def build_D(self, strides=(1, 1)):
         d_input = Input((self.params.W, self.params.H, self.params.n_channels))
         
