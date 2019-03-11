@@ -47,17 +47,43 @@ class CGAN:
     def build_D(self, strides=(1, 1)):
         d_input = Input((self.params.W, self.params.H, self.params.n_channels))
         
-        # Convolve and dropout
-        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), 
+        # Convolve
+        d_layer = Conv2D(self.params.n_filters * 16, (4, 4), 
                          strides=strides, 
                          padding="same", 
                          kernel_initializer=RandomNormal(stddev=0.02))(d_input)
         d_layer = LeakyReLU(alpha=0.2)(d_layer)
         if strides == (1, 1):
             d_layer = MaxPooling2D()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
-        # Convolve and dropout
+        # Convolve
+        d_layer = Conv2D(self.params.n_filters * 16, (4, 4), 
+                         padding="same", 
+                         kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
+        d_layer = BatchNormalization()(d_layer)
+        d_layer = LeakyReLU(alpha=0.2)(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
+        
+        # Convolve
+        d_layer = Conv2D(self.params.n_filters * 8, (4, 4), 
+                         strides=strides, 
+                         padding="same", 
+                         kernel_initializer=RandomNormal(stddev=0.02))(d_input)
+        d_layer = LeakyReLU(alpha=0.2)(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
+        
+        # Convolve
+        d_layer = Conv2D(self.params.n_filters * 8, (4, 4), 
+                         padding="same", 
+                         kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
+        d_layer = BatchNormalization()(d_layer)
+        d_layer = LeakyReLU(alpha=0.2)(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
+        
+        # Convolve
         d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
                          strides=strides, 
                          padding="same", 
@@ -66,28 +92,34 @@ class CGAN:
         d_layer = LeakyReLU(alpha=0.2)(d_layer)
         if strides == (1, 1):
             d_layer = MaxPooling2D()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
         
         # Convolve and dropout
         d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
-                         strides=strides, 
                          padding="same", 
-                         kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
-        d_layer = BatchNormalization()(d_layer)        
-        d_layer = LeakyReLU(alpha=0.2)(d_layer)
-        if strides == (1, 1):
-            d_layer = MaxPooling2D()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)
-        
-        # Convolve and dropout
-        d_layer = Conv2D(self.params.n_filters * 4, (4, 4), 
-                         strides=strides, padding="same", 
                          kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
         d_layer = BatchNormalization()(d_layer)
         d_layer = LeakyReLU(alpha=0.2)(d_layer)
         if strides == (1, 1):
             d_layer = MaxPooling2D()(d_layer)
-        d_layer = Dropout(rate=self.params.drop_rate)(d_layer)     
+        
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), 
+                         strides=strides, 
+                         padding="same", 
+                         kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
+        d_layer = BatchNormalization()(d_layer)
+        d_layer = LeakyReLU(alpha=0.2)(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
+        
+        # Convolve and dropout
+        d_layer = Conv2D(self.params.n_filters * 2, (4, 4), 
+                         padding="same", 
+                         kernel_initializer=RandomNormal(stddev=0.02))(d_layer)
+        d_layer = BatchNormalization()(d_layer)
+        d_layer = LeakyReLU(alpha=0.2)(d_layer)
+        if strides == (1, 1):
+            d_layer = MaxPooling2D()(d_layer)
         
         # Flatten and predict
         d_layer = Flatten()(d_layer)
@@ -107,7 +139,6 @@ class CGAN:
         g_layer = Dense((self.params.W // 8) * (self.params.H // 8) * self.params.n_filters * 16, kernel_initializer=RandomNormal(stddev=0.02))(g_input)
         g_layer = BatchNormalization()(g_layer)
         g_layer = ReLU()(g_layer)
-        g_layer = Dropout(rate=self.params.drop_rate)(g_layer)
         
         # Reshape the data for convolution
         g_layer = Reshape((self.params.W // 8, self.params.H // 8, self.params.n_filters * 16))(g_layer)
