@@ -4,7 +4,7 @@ import struct
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import MinMaxScaler
 
 LANDMARKS = [
     "Outer left eyebrow",
@@ -165,18 +165,26 @@ def scaling_data(face_data):
     print("Scaling data")
     N, W, H, channels = face_data.shape
 
+    scaler = MinMaxScaler((-1, 1))
     for i in range(face_data.shape[0]):
         lowest, low = np.sort(np.unique(face_data[i, :, :, 2]))[:2]
         face_data[i, :, :, 2][face_data[i, :, :, 2] == lowest] = low
+        face_data[i, :, :, 2] = scaler.fit_transform(face_data[i, :, :, 2].reshape(-1, 1)).reshape((W, H))
+        
+    return face_data
 
-    scaler = QuantileTransformer()
-    scaler.fit(face_data[:, :, :, 2].reshape(-1, 1))
-    scaled_z = scaler.transform(face_data[:, :, :, 2].reshape(-1, 1)).reshape((N, W, H))
-    face_data[:, :, :, 2] = scaled_z
-    return scaler, face_data
+def label_data(face_data, lookup_table):
+    labels = ["NONE" for i in range(face_data.shape[0])]
+    for uid in lookup_table:
+        for config in lookup_table[uid]:
+            label = "-".join(config[:2])
+            labels[lookup_table[uid][config]] = label
+    labels = np.array(labels)
+    
+    return labels
 
 def visualize_z(face_data, z_channel=0, lookup_table=None, uid="bs000"):
-    fig, axs = plt.subplots(nrows=1, ncols=5, figsize=(9, 6), subplot_kw={'xticks': [], 'yticks': []})
+    fig, axs = plt.subplots(nrows=3, ncols=6, figsize=(12, 8), subplot_kw={'xticks': [], 'yticks': []})
 
     if lookup_table:
         for ax, config in zip(axs.flat, lookup_table[uid]):
