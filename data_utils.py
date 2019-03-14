@@ -5,6 +5,7 @@ import struct
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from scipy.interpolate import make_interp_spline
 
 LANDMARKS = [
     "Outer left eyebrow",
@@ -200,24 +201,30 @@ def visualize_z(face_data, nrows=2, ncols=4, z_channel=0, lookup_table=None, uid
     
     return fig
     
-def visualize_history(history):
+def visualize_history(history, window=64, n_points=60, power=2):
     
     fig, axs = plt.subplots(2, 1, sharex=True)
 
     x = None
-    axs[0].set_title("Losses")
-    axs[1].set_title("Accuracies")
+    axs[0].set_ylabel("Binary Cross Entropy Loss")
+    axs[1].set_ylabel("Accuracy")
     for key in history:
         if x is None:
-            x = list(range(len(history[key])))
-        y = [np.mean(history[key][-10:i]) for i in range(len(x))]
+            x = list(range(window, len(history[key]) + 1))
+            x_new = np.linspace(x[0], x[-1], n_points)
+        y = [np.mean(history[key][i - window + 1:i]) for i in x]
+        spline = make_interp_spline(x, y, k=power)
+        y_new = spline(x_new)
         if key[::-1].endswith("ssol"):
-            axs[0].plot(x, y, label=key)
+            axs[0].plot(x_new, y_new, label=key)
         else:
-            axs[1].plot(x, y, label=key)
+            axs[1].plot(x_new, y_new, label=key)
     axs[0].legend()
     axs[1].legend()
 
+    plt.xlabel("Minbatch", labelpad=10)
+    fig.align_ylabels(axs[:])
+    
     plt.tight_layout()
     plt.show()
     
