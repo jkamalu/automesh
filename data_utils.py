@@ -183,8 +183,8 @@ def label_data(face_data, lookup_table):
     
     return labels
 
-def visualize_z(face_data, z_channel=0, lookup_table=None, uid="bs000"):
-    fig, axs = plt.subplots(nrows=3, ncols=6, figsize=(12, 8), subplot_kw={'xticks': [], 'yticks': []})
+def visualize_z(face_data, nrows=2, ncols=4, z_channel=0, lookup_table=None, uid="bs000"):
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6, 4), subplot_kw={'xticks': [], 'yticks': []})
 
     if lookup_table:
         for ax, config in zip(axs.flat, lookup_table[uid]):
@@ -197,6 +197,8 @@ def visualize_z(face_data, z_channel=0, lookup_table=None, uid="bs000"):
 
     plt.tight_layout()
     plt.show()
+    
+    return fig
     
 def visualize_history(history):
     
@@ -218,3 +220,5 @@ def visualize_history(history):
 
     plt.tight_layout()
     plt.show()
+    
+    return fig
